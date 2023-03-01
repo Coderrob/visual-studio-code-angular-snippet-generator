@@ -23,20 +23,46 @@
 
 import * as Strings from "strings.js";
 
-describe("kebabToTitle", () => {
-  test("should convert keybab cased string to a title format", () => {
-    expect(Strings.kebabToTitle("fancy-button-menu")).toBe("Fancy Button Menu");
+describe("Strings tests", () => {
+  describe("kebabToTitle", () => {
+    it("should convert kebab cased string to a title format", () => {
+      expect(Strings.kebabToTitle("fancy-button-menu")).toBe(
+        "Fancy Button Menu"
+      );
+    });
+
+    it("should return empty if the string is undefined", () => {
+      expect(Strings.kebabToTitle(undefined)).toBe("");
+    });
+
+    it("should return a capital letter if string only one character in length", () => {
+      expect(Strings.kebabToTitle("a")).toBe("A");
+    });
+
+    it("should return empty string if string only whitespace characters", () => {
+      expect(Strings.kebabToTitle("    ")).toBe("");
+    });
   });
 
-  test("should return empty if the string is undefined", () => {
-    expect(Strings.kebabToTitle(undefined)).toBe("");
-  });
+  describe("capitalizeWord", () => {
+    it("should return empty string if undefined value received", () => {
+      expect(Strings.capitalizeWord(undefined)).toBe("");
+    });
 
-  test("should return a capital letter if string only one character in length", () => {
-    expect(Strings.kebabToTitle("a")).toBe("A");
-  });
+    it("should uppercase a single character string", () => {
+      expect(Strings.capitalizeWord("a")).toBe("A");
+    });
 
-  test("should return empty string if string only whitespace characters", () => {
-    expect(Strings.kebabToTitle("    ")).toBe("");
+    it("should uppercase the first character of a word", () => {
+      expect(Strings.capitalizeWord("aardvark")).toBe("Aardvark");
+    });
+
+    it("should only uppercase the first word found in a string", () => {
+      expect(Strings.capitalizeWord("greedy narwhal")).toBe("Greedy narwhal");
+    });
+
+    it("should handle empty string", () => {
+      expect(Strings.capitalizeWord("  ")).toBe("  ");
+    });
   });
 });

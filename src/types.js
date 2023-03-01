@@ -21,27 +21,31 @@
  * SOFTWARE.
  */
 
-import * as Files from "./files.js";
+/**
+ * The Property type contains the name and data type of a property.
+ * @typedef {Object} Property
+ * @property {string} name - The name of a property.
+ * @property {string|undefined} type - The data type of a property.
+ */
 
-describe("Files tests", () => {
-  describe("getFileData", () => {
-    it("should read file data", () => {
-      const data = Files.getFileData("test\\component.txt");
-      expect(data).toBeDefined();
-    });
-
-    it("should handle file read failure", () => {});
-  });
-
-  describe("getSupportedFiles", () => {});
-
-  describe("hasFileExtension", () => {
-    it("should return false when no extensions are provided", () => {});
-
-    it("should return false when no path is provided", () => {});
-
-    it("should return false when no extensions match the file extensions name", () => {});
-
-    it("should return true when a file extensions matches a provided extension", () => {});
-  });
-});
+export const PropertyKind = {
+  UNKNOWN: 0,
+  PROPERTY: 1,
+  EVENT: 2,
+};
+export const DecoratorType = {
+  COMPONENT: "Component",
+  INPUT: "Input",
+  OUTPUT: "Output",
+};
+export const DataType = {
+  ANY: "any",
+  BOOLEAN: "boolean",
+  NULL: "null",
+  NUMBER: "number",
+  OBJECT: "object",
+  STRING: "string",
+};
+export const SELECTOR_PROPERTY = "selector";
+export const DEFAULT_DATA_TYPE = DataType.ANY;
+export const EVENT_EMITTER_TYPE = "EventEmitter";

@@ -68,7 +68,7 @@ export const getSupportedFiles = function (
         files.push(...getSupportedFiles(filePath));
         break;
 
-      // File - process supported file
+      // File - process file if supported
       case dirent.isFile() && isFileSupported(filePath):
         files.push(filePath);
         break;

@@ -22,23 +22,9 @@
  */
 
 import ts from "typescript";
+import { DecoratorType, SELECTOR_PROPERTY } from "types.js";
+import * as Nodes from "nodes.js";
 
-const DECORATOR_TYPE = {
-  COMPONENT: "Component",
-  INPUT: "Input",
-  OUTPUT: "Output",
-  SELECTOR: "selector",
-};
-const DATA_TYPE = {
-  ANY: "any",
-  BOOLEAN: "boolean",
-  NULL: "null",
-  NUMBER: "number",
-  OBJECT: "object",
-  STRING: "string",
-};
-const DEFAULT_DATA_TYPE = DATA_TYPE.ANY;
-const EVENT_EMITTER_TYPE = "EventEmitter";
 /**
  * The Property type contains the name and data type of a property.
  * @typedef {Object} Property
@@ -56,167 +42,117 @@ const EVENT_EMITTER_TYPE = "EventEmitter";
  * @property {Property[]} outputs - The event properties of a component.
  */
 
-const getTypeScriptSource = function (data = "") {
-  if (!data) return;
+/**
+ * Gets the root node of an abstract syntax tree from the TypeScript's
+ * file contents.
+ *
+ * @param {string|undefined} sourceText = string contents of an a TypeScript file
+ * @returns {ts.SourceFile|undefined} the root node of the TypeScript file's AST; otherwise returns undefined.
+ */
+const getTypeScriptSource = function (sourceText = "") {
+  if (!sourceText) return;
   return ts.createSourceFile(
-    "x.ts", // File name
-    data, // Source
-    ts.ScriptTarget.Latest, // TS version
-    true, // Start at root node,
-    ts.ScriptKind.TS
+    "temp.ts", // Temporary file name
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true, // start source code node at root node for the file
+    ts.ScriptKind.TS // the type of file content being read
   );
 };
 
-function isDecorator(node, decoratorType) {
-  return (
-    ts.isDecorator(node) &&
-    ts.isIdentifier(node.expression?.expression) &&
-    ts.idText(node.expression.expression) === decoratorType
-  );
-}
-
-function isComponent(node) {
-  return (
-    ts.isCallExpression(node.expression) &&
-    ts.isIdentifier(node.expression?.expression) &&
-    ts.idText(node.expression.expression) === DECORATOR_TYPE.COMPONENT
-  );
-}
-
-function getClassName(node, sourceCode) {
-  if (!ts.isClassDeclaration(node)) return "";
-  return node.name?.getText(sourceCode) ?? "";
-}
-
-function getSelectorName(node, sourceCode) {
-  if (!ts.isClassDeclaration(node)) return "";
-  if (!ts.canHaveDecorators(node)) return "";
-  const decorator = ts.getDecorators(node)?.find(isComponent);
-  for (const argument of decorator?.expression?.arguments ?? []) {
-    for (const selector of argument?.properties ?? []) {
-      if (!ts.isPropertyAssignment(selector)) continue;
-      if (selector?.name?.getText(sourceCode) !== DECORATOR_TYPE.SELECTOR)
-        continue;
-      return selector?.initializer?.text ?? "";
-    }
+/**
+ * Walk through the component decorator's properties looking
+ * for the selector property and its value. When found the selector
+ * value will be sent back to the caller.
+ *
+ * @param {ts.ClassDeclaration} node
+ * @returns {string} the component selector property value; otherwise returns an empty string.
+ */
+function getSelectorName(node) {
+  if (!ts.isClassDeclaration(node) || !ts.canHaveDecorators(node)) {
+    return "";
+  }
+  const decorator = ts.getDecorators(node)?.find(Nodes.isComponent);
+  if (!decorator) return "";
+  /**
+   * Iterate through the component decorator's properties looking
+   * for the selector property, and then return its value when
+   * found; otherwise returns an empty string.
+   */
+  for (const argument of decorator.expression?.arguments ?? []) {
+    const property = Nodes.findAssignedProperty(argument, SELECTOR_PROPERTY);
+    if (!property) continue;
+    const selectorName = property.initializer?.text ?? "";
+    if (!selectorName) continue;
+    return selectorName;
   }
   return "";
 }
 
+/**
+ * @param {ts.ClassDeclaration} node
+ * @param {DecoratorType} type
+ * @param {ts.Node} sourceCode
+ */
 function getDecoratorNames(node, type, sourceCode) {
   const names = [];
-  node.members
-    .filter(
-      (member) => ts.isPropertyDeclaration(member) || ts.isGetAccessor(member)
-    )
-    .forEach((member) =>
-      ts
-        .getDecorators(member)
-        ?.filter((decorator) => isDecorator(decorator, type))
-        .forEach((decorator) =>
-          names.push({
-            name:
-              getNodeAliasName(decorator.expression) ||
-              member.name.getText(sourceCode),
-            type: getTypeName(member, sourceCode),
-          })
-        )
-    );
+  node.members?.filter(Nodes.isPropertyOrGetAccessor).forEach((member) =>
+    ts
+      .getDecorators(member)
+      ?.filter((decorator) => Nodes.isDecorator(decorator, type))
+      .forEach((decorator) => {
+        /**
+         * Use the alias over property identifier to cover case
+         * when an alias is set in @Input('alias') or @Output('alias').
+         */
+        names.push({
+          name: Nodes.getAliasName(decorator.expression) || member.name?.text,
+          type: Nodes.getTypeName(member, sourceCode),
+        });
+      })
+  );
   return names;
 }
 
-function getTypeName(node, sourceCode) {
-  const type = node.type
-    ? getReferenceTypeName(node, sourceCode)
-    : getLiteralTypeName(node, sourceCode);
-  return isMarkedUndefined(node) ? `${type}|undefined` : type;
-}
-
-function isMarkedUndefined(node) {
-  return !!node?.questionToken;
-}
-
-function getNodeAliasName(expression) {
-  const [aliasNode] = expression?.arguments ?? [];
-  return aliasNode && ts.isStringLiteral(aliasNode) && aliasNode.text;
-}
-
+/**
+ * Gets the first component's metadata information
+ * found within a source code file.
+ *
+ * The assumption here is that a component's TypeScript
+ * file should contain only one component
+ *
+ * @param {ts.Node} sourceCode
+ * @returns {ComponentInfo[]} an array of component info objects for components found in the source code; otherwise an empty array.
+ */
 function getComponentMetadata(sourceCode) {
   const components = [];
-  function scanNode(node) {
+  /**
+   * @param {ts.Node|undefined} node
+   */
+  function visit(node) {
+    if (!node) return;
     /**
-     * Scan syntax tree until one class identifier is found.
+     * Walk the abstract syntax tree until the first class
+     * identifier is found.
+     *
+     * This makes assumptions that the component class should
+     * be only class contained within the TypeScript file. There
+     * may be constants, enums, types, or interfaces at the same
+     * level but only one class.
      */
     if (!ts.isClassDeclaration(node)) {
-      ts.forEachChild(node, scanNode);
+      ts.forEachChild(node, visit);
       return;
     }
     components.push({
-      className: getClassName(node, sourceCode),
+      className: Nodes.getClassName(node),
       selector: getSelectorName(node),
-      inputNames: getDecoratorNames(node, DECORATOR_TYPE.INPUT, sourceCode),
-      outputNames: getDecoratorNames(node, DECORATOR_TYPE.OUTPUT, sourceCode),
+      inputs: getDecoratorNames(node, DecoratorType.INPUT, sourceCode),
+      outputs: getDecoratorNames(node, DecoratorType.OUTPUT, sourceCode),
     });
   }
-  scanNode(sourceCode);
+  visit(sourceCode);
   return components;
-}
-
-function getReferenceTypeName(node, sourceCode) {
-  const { type: typeNode } = node ?? {};
-  switch (true) {
-    case !node:
-      return DEFAULT_DATA_TYPE;
-
-    case !typeNode:
-      return DEFAULT_DATA_TYPE;
-
-    case !ts.isTypeReferenceNode(typeNode):
-      return typeNode.getText(sourceCode) || DEFAULT_DATA_TYPE;
-
-    case !ts.isIdentifier(typeNode.typeName):
-      return DEFAULT_DATA_TYPE;
-
-    case typeNode.typeName.getText(sourceCode) === EVENT_EMITTER_TYPE: {
-      const [type] = typeNode.typeArguments ?? [];
-      return type.getText(sourceCode) || DEFAULT_DATA_TYPE;
-    }
-
-    default:
-      return typeNode.typeName.getText(sourceCode) || DEFAULT_DATA_TYPE;
-  }
-}
-
-function getLiteralTypeName(node, sourceCode) {
-  const { initializer } = node ?? {};
-
-  switch (true) {
-    case !node:
-      return DEFAULT_DATA_TYPE;
-
-    case !initializer:
-      return DEFAULT_DATA_TYPE;
-
-    case ts.isStringLiteral(initializer):
-      return DATA_TYPE.STRING;
-
-    case ts.isNumericLiteral(initializer):
-      return DATA_TYPE.NUMBER;
-
-    case ts.isBooleanLiteral(initializer):
-      return DATA_TYPE.BOOLEAN;
-
-    case ts.isArrayLiteralExpression(initializer): {
-      const [typeNode] = initializer?.elements ?? [];
-      const elementType = typeNode
-        ? getLiteralType(typeNode, sourceCode)
-        : DEFAULT_DATA_TYPE;
-      return `${elementType}[]`;
-    }
-
-    default:
-      return DEFAULT_DATA_TYPE;
-  }
 }
 
 /**

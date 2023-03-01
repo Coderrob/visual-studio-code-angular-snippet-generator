@@ -21,6 +21,12 @@
  * SOFTWARE.
  */
 
+export const capitalizeWord = function (value = "") {
+  if (!value) return value;
+  const firstCharacter = value.charAt(0).toUpperCase();
+  return [firstCharacter, value.slice(1)].filter(Boolean).join("");
+};
+
 /**
  * @param {string} value The kebab cased string to convert to a snippet title.
  * @returns {string} - The formatted title of a kebab cased string with
@@ -33,7 +39,7 @@ export const kebabToTitle = function (value = "") {
       .replace(/-/g, " ")
       .split(" ")
       // Uppercase the first character of each word
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ") ?? ""
+      .map(capitalizeWord)
+      .join(" ")
   );
 };

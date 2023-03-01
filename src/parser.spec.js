@@ -24,6 +24,23 @@
 import * as Generate from "./parser.js";
 
 describe("Generate tests", () => {
+  const mockComponentInfo = {
+    className: "SaveCancelButtonComponent",
+    inputs: [
+      { name: "label", type: "string" },
+      { name: "disabled", type: "boolean" },
+      { name: "icon", type: "string" },
+      { name: "color", type: "Color" },
+      { name: "tooltip", type: "string|undefined" },
+    ],
+    outputs: [
+      { name: "cancel", type: "boolean" },
+      { name: "save", type: "any" },
+      { name: "draft", type: "any" },
+    ],
+    selector: "save-cancel-button",
+  };
+
   const mockComponentData = `
   enum Color {
     RED = "red",
@@ -60,26 +77,9 @@ describe("Generate tests", () => {
   `;
 
   describe("parseComponent", () => {
-    test("should parse and return a component information object matching the mocked component data", () => {
+    it("should parse and return a component information object matching the mocked component data", () => {
       const component = Generate.parseComponent(mockComponentData);
-      expect(component).toEqual([
-        {
-          className: "SaveCancelButtonComponent",
-          inputNames: [
-            { name: "label", type: "string" },
-            { name: "disabled", type: "boolean" },
-            { name: "icon", type: "string" },
-            { name: "color", type: "Color" },
-            { name: "tooltip", type: "string|undefined" },
-          ],
-          outputNames: [
-            { name: "cancel", type: "boolean" },
-            { name: "save", type: "any" },
-            { name: "draft", type: "any" },
-          ],
-          selector: "save-cancel-button",
-        },
-      ]);
+      expect(component).toEqual([mockComponentInfo]);
     });
   });
 });
