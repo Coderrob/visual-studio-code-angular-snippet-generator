@@ -3,8 +3,20 @@
   "version": "1.0.0",
   "description": "A Visual Studio Code extension to generate Angular code snippets.",
   "main": "index.js",
+  "publisher": "coderrob",
+  "engines": {
+    "vscode": "^1.67.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets"
+  ],
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "eslint \"src/**/*.ts\"",
+    "watch": "tsc -watch -p ./"
   },
   "repository": {
     "type": "git",
@@ -36,6 +48,7 @@
     "@babel/register": "^7.18.9",
     "babel-jest": "^29.4.1",
     "jest": "^29.4.1",
-    "jest-runner": "^29.4.1"
+    "jest-runner": "^29.4.1",
+    "eslint": "^8.12.0"
   }
 }

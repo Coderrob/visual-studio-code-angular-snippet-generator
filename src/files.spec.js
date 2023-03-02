@@ -35,13 +35,39 @@ describe("Files tests", () => {
 
   describe("getSupportedFiles", () => {});
 
+  describe("isFileSupported", () => {
+    test("should return true if file extension and file suffix match Angular component naming convention", () => {
+      expect(Files.isFileSupported("c:\\some\\path\\some.component.ts")).toBe(
+        true
+      );
+
+      expect(Files.isFileSupported("c:\\some\\path\\some.module.ts")).toBe(
+        false
+      );
+    });
+
+    test("should return false if file extension is valid but and file suffix does not match Angular component naming convention", () => {
+      expect(Files.isFileSupported("c:\\some\\path\\some.module.ts")).toBe(
+        false
+      );
+    });
+  });
+
   describe("hasFileExtension", () => {
-    it("should return false when no extensions are provided", () => {});
+    it("should return false when no extensions are provided", () => {
+      expect(Files.hasFileExtension("/some/path/derp")).toBe(false);
+    });
 
-    it("should return false when no path is provided", () => {});
+    it("should return false when no path is provided", () => {
+      expect(Files.hasFileExtension(undefined)).toBe(false);
+    });
 
-    it("should return false when no extensions match the file extensions name", () => {});
+    it("should return false when no extensions match the file extensions name", () => {
+      expect(Files.hasFileExtension("/some/path/index.sass")).toBe(false);
+    });
 
-    it("should return true when a file extensions matches a provided extension", () => {});
+    it("should return true when a file extensions matches a provided extension", () => {
+      expect(Files.hasFileExtension("/some/path/index.ts")).toBe(true);
+    });
   });
 });

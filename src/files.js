@@ -24,7 +24,14 @@
 import fs from "fs";
 import path from "path";
 
-export const SUPPORTED_EXtENSIONS = [".ts", ".js"];
+export const SUPPORTED_EXtENSIONS = [".ts"];
+/**
+ * Per Angular naming convention a component should
+ * have a file named with a .component.ts suffix.
+ *
+ * https://angular.io/guide/styleguide#file-structure-conventions
+ */
+export const COMPONENT_SUFFIX = ".component.ts";
 
 /**
  * @param {string} [path=""] - The path to a file to read and return the
@@ -32,14 +39,14 @@ export const SUPPORTED_EXtENSIONS = [".ts", ".js"];
  * @returns {(string|undefined)} The contents of the file found at the path provided;
  * otherwise will return undefined in the event of failure.
  */
-export const getFileData = function (path = "") {
+export function getFileData(path = "") {
   try {
     return fs.readFileSync(path, { encoding: "utf8", flag: "r" }) ?? "";
   } catch (error) {
     console.error(`Failed to read file '${path}'; ${error}`);
     return;
   }
-};
+}
 
 /**
  * Returns a list of supported files found within the directory
@@ -47,18 +54,12 @@ export const getFileData = function (path = "") {
  * file extensions.
  * @param {string} dir - The directory path to traverse looking
  * for any files matching the supported file extensions.
- * @param {string[]} extensions - The supported file extensions to
- * scan the directory and sub-directories for.
  * @returns {string[]} List of files found within the directory
  * structure that matched the list of supported file extensions.
  */
-export const getSupportedFiles = function (
-  dir = "",
-  extensions = SUPPORTED_EXtENSIONS
-) {
+export function getSupportedFiles(dir = "") {
   if (!dir) throw new Error("Directory path not provided.");
   if (!extensions) throw new Error("Supported extensions not provided.");
-  const isFileSupported = hasFileExtension(extensions);
   const files = [];
   fs.readdirSync(dir, { withFileTypes: true }).forEach((dirent) => {
     const filePath = path.join(dir, dirent.name);
@@ -75,14 +76,18 @@ export const getSupportedFiles = function (
     }
   });
   return files;
-};
+}
+
+export function isFileSupported(filePath = "") {
+  return hasFileExtension(filePath) && filePath.endsWith(COMPONENT_SUFFIX);
+}
 
 /**
  * @param {string[]} extensions - The list of extensions
  */
-export const hasFileExtension = function (extensions) {
-  return (path) =>
-    !!extensions &&
-    !!path &&
-    extensions.includes(path.extname(path)?.toLowerCase());
-};
+export function hasFileExtension(filePath = "") {
+  return (
+    !!filePath &&
+    SUPPORTED_EXtENSIONS.includes(path.extname(filePath)?.toLowerCase())
+  );
+}
