@@ -1,0 +1,32 @@
+enum Color {
+  RED = "red",
+  WHITE = "white",
+  BLUE = "blue",
+}
+
+@Component({
+  selector: "save-cancel-button",
+  templateUrl: "save-cancel-button.component.html",
+})
+export class SaveCancelButtonComponent {
+  @Input()
+  public label: string;
+
+  @Input("disabled")
+  public get notEnabled(): boolean {
+    return this._enabled;
+  }
+  private _enabled = false;
+
+  @Input("icon")
+  public iconName = "info";
+  @Input() public color: Color;
+  @Input() tooltip?: string;
+
+  @Output("cancel")
+  public deleteItAll: EventEmitter<boolean>;
+
+  @Output() save = new EventEmitter<undefined>();
+  @Output()
+  public draft = new EventEmitter<any>();
+}
